@@ -1,50 +1,50 @@
 --only-binary :all:
 
 # FastAPI and web dependencies
-fastapi>=0.103.1,<0.104.0
-uvicorn>=0.23.2,<0.24.0
-pydantic>=2.4.0,<2.5.0
-pydantic-settings>=2.1.0,<2.2.0
-python-dotenv>=1.0.0,<1.1.0
-starlette>=0.27.0,<0.28.0
-httpx>=0.25.0,<0.26.0
-python-multipart>=0.0.6,<0.0.7
-requests>=2.31.0,<2.32.0
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+starlette
+httpx
+python-multipart
+requests
 
 # LangChain and AI dependencies
-langchain>=0.0.267,<0.1.0
-langchain-community>=0.0.10,<0.1.0
-langchain-google-genai>=0.0.3,<0.1.0
-langchain-groq>=0.0.1,<0.1.0
-faiss-cpu>=1.9.0,<1.12.0
-pypdf>=3.15.0,<4.0.0
+langchain
+langchain-community
+langchain-google-genai
+langchain-groq
+faiss-cpu
+pypdf
 
 # PDF and file handling
 reportlab
-python-magic>=0.4.24,<0.5.0
+python-magic
 
 # Database and storage
-sqlalchemy>=2.0.0,<2.1.0
-redis>=4.5.1,<5.0.0
-alembic>=1.11.1,<1.12.0
-aiofiles>=23.1.0,<24.0.0
-aiosqlite>=0.17.0,<0.18.0
-databases>=0.7.0,<0.8.0
+sqlalchemy
+redis
+alembic
+aiofiles
+aiosqlite
+databases
 
 # Security and authentication
-passlib>=1.7.4,<1.8.0
-python-jose>=3.3.0,<3.4.0
-bcrypt>=4.0.1,<4.1.0
+passlib
+python-jose
+bcrypt
 
 # Monitoring and observability
-prometheus-client>=0.16.0,<0.17.0
-opentelemetry-api>=1.18.0,<1.19.0
-opentelemetry-sdk>=1.18.0,<1.19.0
-opentelemetry-exporter-otlp>=1.18.0,<1.19.0
-opentelemetry-instrumentation-fastapi>=0.39b0,<0.40.0
-gunicorn>=21.2.0,<21.3.0
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+gunicorn
 
 # Testing
-pytest>=7.3.1,<8.0.0
-pytest-asyncio>=0.21.0,<0.22.0
+pytest
+pytest-asyncio
 coverage
