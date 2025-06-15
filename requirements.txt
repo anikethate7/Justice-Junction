@@ -35,6 +35,7 @@ databases
 passlib
 python-jose
 bcrypt
+pydantic[email]
 
 # Monitoring and observability
 prometheus-client
