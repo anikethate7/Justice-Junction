@@ -30,12 +30,14 @@ alembic
 aiofiles
 aiosqlite
 databases
+pymongo
 
 # Security and authentication
 passlib
 python-jose
 bcrypt
 pydantic[email]
+
 
 # Monitoring and observability
 prometheus-client
