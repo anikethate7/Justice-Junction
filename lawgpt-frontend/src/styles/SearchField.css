@@ -1,0 +1,192 @@
+/* SearchField.css - Reusable search field component */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+.search-container {
+  background-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 20px;
+  padding: 1.2rem;
+  max-width: 650px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transform: translateY(0);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.search-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+}
+
+.search-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
+}
+
+.search-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.search-input-wrapper:focus-within {
+  background-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.search-input-wrapper i {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+  margin-right: 10px;
+  animation: fadeInOut 2s infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.5; }
+}
+
+.search-input-wrapper input {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  width: 100%;
+  padding: 0.5rem 0;
+  outline: none;
+}
+
+.search-input-wrapper input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 300;
+}
+
+.search-input-wrapper:focus-within input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.clear-search-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.clear-search-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Adapting for different page backgrounds */
+.light-theme .search-container {
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.light-theme .search-input-wrapper {
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.light-theme .search-input-wrapper i,
+.light-theme .search-input-wrapper input {
+  color: #333;
+}
+
+.light-theme .search-input-wrapper input::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.light-theme .clear-search-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.light-theme .clear-search-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .search-container {
+    padding: 1rem;
+    max-width: 100%;
+  }
+  
+  .search-input-wrapper {
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .search-input-wrapper i {
+    font-size: 1rem;
+  }
+  
+  .search-input-wrapper input {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-container {
+    padding: 0.8rem;
+  }
+  
+  .search-input-wrapper {
+    padding: 0.3rem 0.6rem;
+  }
+  
+  .search-input-wrapper i {
+    font-size: 0.9rem;
+    margin-right: 6px;
+  }
+  
+  .search-input-wrapper input {
+    font-size: 0.85rem;
+  }
+  
+  .clear-search-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+} 
