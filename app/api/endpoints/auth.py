@@ -6,6 +6,7 @@ from passlib.context import CryptContext
 from uuid import uuid4
 import requests
 import json
+import traceback
 from typing import Union
 from pymongo.database import Database
 
@@ -30,16 +31,26 @@ async def register(
     db: Union[Session, Database] = Depends(get_db)
 ):
     """Register a new user."""
-    # Check rate limit
-    client_ip = request.client.host
-    if not check_rate_limit(client_ip, limit=10):  # Stricter limit for registrations
+    try:
+        # Check rate limit
+        client_ip = request.client.host
+        if not check_rate_limit(client_ip, limit=10):  # Stricter limit for registrations
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many registration attempts. Please try again later."
+            )
+        
+        # Create user
+        return create_user(db, user_create)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Registration error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many registration attempts. Please try again later."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
         )
-    
-    # Create user
-    return create_user(db, user_create)
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
@@ -48,20 +59,19 @@ async def login_for_access_token(
     db: Union[Session, Database] = Depends(get_db)
 ):
     """Authenticate a user and generate access token."""
-    # Check rate limit
-    client_ip = request.client.host
-    if not check_rate_limit(client_ip, limit=10):  # Stricter limit for login attempts
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again later."
-        )
-    
-    # Log the input for debugging
-    print(f"Login attempt with username: {form_data.username}")
-    
-    # Attempt to authenticate with direct database access
     try:
-        # Use the authenticate_user function which handles both database types
+        # Check rate limit
+        client_ip = request.client.host
+        if not check_rate_limit(client_ip, limit=10):  # Stricter limit for login attempts
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Please try again later."
+            )
+        
+        # Log the input for debugging
+        print(f"Login attempt with username: {form_data.username}")
+        
+        # Attempt to authenticate with direct database access
         user = authenticate_user(db, form_data.username, form_data.password)
         
         if user is None:
@@ -93,6 +103,7 @@ async def login_for_access_token(
     except Exception as e:
         # Log error and return generic error
         print(f"Error during authentication: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during authentication",
@@ -101,143 +112,176 @@ async def login_for_access_token(
 @router.get("/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_active_user), db: Union[Session, Database] = Depends(get_db)):
     """Get current user information."""
-    # Get user from database to access user_metadata
-    if isinstance(db, Database):
-        # MongoDB
-        user = db.users.find_one({"id": current_user.id})
+    try:
+        # Get user from database to access user_metadata
+        if isinstance(db, Database):
+            # MongoDB
+            user = db.users.find_one({"id": current_user.id})
+            
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found",
+                )
+            
+            # Prepare the base response
+            response_data = {
+                "id": current_user.id,
+                "username": current_user.username,
+                "email": current_user.email,
+                "full_name": current_user.full_name or "",
+                "is_active": current_user.is_active,
+                "status": "active"
+            }
+            
+            # Add custom fields from user_metadata if available
+            if user.get("user_metadata"):
+                try:
+                    metadata = json.loads(user["user_metadata"])
+                    for key, value in metadata.items():
+                        response_data[key] = value
+                except Exception as e:
+                    print(f"Error parsing MongoDB user metadata: {str(e)}")
+        else:
+            # SQLite
+            user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+            
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found",
+                )
+            
+            # Prepare the base response
+            response_data = {
+                "id": current_user.id,
+                "username": current_user.username,
+                "email": current_user.email,
+                "full_name": current_user.full_name or "",
+                "is_active": current_user.is_active,
+                "status": "active"
+            }
+            
+            # Add custom fields from user_metadata if available
+            if user.user_metadata:
+                try:
+                    metadata = json.loads(user.user_metadata)
+                    for key, value in metadata.items():
+                        response_data[key] = value
+                except Exception as e:
+                    print(f"Error parsing SQLite user metadata: {str(e)}")
         
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
-        
-        # Prepare the base response
-        response_data = {
-            "id": current_user.id,
-            "username": current_user.username,
-            "email": current_user.email,
-            "full_name": current_user.full_name or "",
-            "is_active": current_user.is_active,
-            "status": "active"
-        }
-        
-        # Add custom fields from user_metadata if available
-        if user.get("user_metadata"):
-            try:
-                metadata = json.loads(user["user_metadata"])
-                for key, value in metadata.items():
-                    response_data[key] = value
-            except Exception as e:
-                print(f"Error parsing MongoDB user metadata: {str(e)}")
-    else:
-        # SQLite
-        user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
-        
-        # Prepare the base response
-        response_data = {
-            "id": current_user.id,
-            "username": current_user.username,
-            "email": current_user.email,
-            "full_name": current_user.full_name or "",
-            "is_active": current_user.is_active,
-            "status": "active"
-        }
-        
-        # Add custom fields from user_metadata if available
-        if user.user_metadata:
-            try:
-                metadata = json.loads(user.user_metadata)
-                for key, value in metadata.items():
-                    response_data[key] = value
-            except Exception as e:
-                print(f"Error parsing SQLite user metadata: {str(e)}")
-    
-    return response_data
+        return response_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting user info: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving user information"
+        )
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(current_user: User = Depends(get_current_active_user)):
     """Refresh the access token."""
-    # Generate a new access token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": current_user.username},
-        expires_delta=access_token_expires
-    )
-    
-    return Token(access_token=access_token, token_type="bearer")
+    try:
+        # Generate a new access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": current_user.username},
+            expires_delta=access_token_expires
+        )
+        
+        return Token(access_token=access_token, token_type="bearer")
+    except Exception as e:
+        print(f"Token refresh error: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token refresh failed"
+        )
 
 @router.get("/test", status_code=status.HTTP_200_OK)
 async def test_endpoint():
     """Test endpoint to check if auth API is working."""
-    return {"message": "Auth API is working!"}
+    return {"message": "Auth API is working!", "timestamp": datetime.utcnow().isoformat()}
 
 @router.post("/login-test")
 async def login_test(username: str, password: str, db: Union[Session, Database] = Depends(get_db)):
     """Test endpoint for login debugging."""
-    print(f"Test login with username: {username}, password: {password}")
-    
-    # Use the authenticate_user function which handles both database types
-    user = authenticate_user(db, username, password)
-    
-    if user is None:
-        print(f"Authentication failed for username: {username}")
-        return {"success": False, "message": "Authentication failed"}
-    
-    # Get username based on database type
-    if isinstance(db, Database):
-        username = user.get("username")
-    else:
-        username = user.username
-    
-    # Generate a token on successful verification
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": username},
-        expires_delta=access_token_expires
-    )
-    return {
-        "success": True,
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    try:
+        print(f"Test login with username: {username}, password: {password}")
+        
+        # Use the authenticate_user function which handles both database types
+        user = authenticate_user(db, username, password)
+        
+        if user is None:
+            print(f"Authentication failed for username: {username}")
+            return {"success": False, "message": "Authentication failed"}
+        
+        # Get username based on database type
+        if isinstance(db, Database):
+            username = user.get("username")
+        else:
+            username = user.username
+        
+        # Generate a token on successful verification
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": username},
+            expires_delta=access_token_expires
+        )
+        return {
+            "success": True,
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    except Exception as e:
+        print(f"Login test error: {str(e)}")
+        traceback.print_exc()
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 @router.post("/google-login", response_model=Token)
 async def google_login(
     request: Request,
-    data: dict,
     db: Union[Session, Database] = Depends(get_db)
 ):
     """Authenticate a user with Google OAuth token and generate access token."""
-    # Check rate limit
-    client_ip = request.client.host
-    if not check_rate_limit(client_ip, limit=10):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again later."
-        )
-    
     try:
-        # Get the token from the request
-        token = data.get("token")
+        # Check rate limit
+        client_ip = request.client.host
+        if not check_rate_limit(client_ip, limit=10):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Please try again later."
+            )
+        
+        # Get the request body
+        body = await request.json()
+        print(f"Received Google login request: {body}")  # Debug log
+        
+        # Get the token from the request - handle multiple possible formats
+        token = body.get("token") or body.get("credential") or body.get("id_token")
         if not token:
+            print(f"No token found in request body: {body}")  # Debug log
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing token",
+                detail="Missing token in request body. Expected 'token', 'credential', or 'id_token' field.",
             )
+        
+        print(f"Using token: {token[:50]}...")  # Debug log (partial token)
         
         # Verify the token with Google
         google_response = requests.get(
-            f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={token}",
+            timeout=10  # Add timeout
         )
         
+        print(f"Google response status: {google_response.status_code}")  # Debug log
+        
         if google_response.status_code != 200:
+            print(f"Google token verification failed: {google_response.text}")  # Debug log
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Google token",
@@ -246,6 +290,8 @@ async def google_login(
         
         # Extract user info from Google response
         google_data = google_response.json()
+        print(f"Google user data: {google_data}")  # Debug log
+        
         email = google_data.get("email")
         
         if not email:
@@ -305,6 +351,8 @@ async def google_login(
                 user.last_login = datetime.utcnow()
                 db.commit()
         
+        print(f"Successfully authenticated user: {username}")  # Debug log
+        
         # Generate access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
@@ -334,9 +382,34 @@ async def google_login(
     except Exception as e:
         # Log error and return generic error
         print(f"Error during Google authentication: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error during Google authentication: {str(e)}",
+        )
+
+@router.post("/session")
+async def create_chat_session(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create a new chat session."""
+    try:
+        # Generate a unique session ID
+        session_id = str(uuid4())
+        
+        return {
+            "session_id": session_id,
+            "user_id": current_user.id,
+            "created_at": datetime.utcnow().isoformat(),
+            "status": "active"
+        }
+    except Exception as e:
+        print(f"Error creating chat session: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create chat session"
         )
 
 @router.put("/profile", response_model=User)
@@ -512,7 +585,39 @@ async def update_user_profile(
         if not isinstance(db, Database):
             db.rollback()
         print(f"Error updating profile: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating profile: {str(e)}",
         )
+
+# Additional debugging endpoints
+@router.get("/debug/headers")
+async def debug_headers(request: Request):
+    """Debug endpoint to check request headers."""
+    headers = dict(request.headers)
+    return {
+        "headers": headers,
+        "method": request.method,
+        "url": str(request.url),
+        "client": request.client.host if request.client else None
+    }
+
+@router.options("/google-login")
+async def google_login_options():
+    """Handle OPTIONS preflight request for Google login."""
+    return {"message": "OK"}
+
+@router.options("/session")
+async def session_options():
+    """Handle OPTIONS preflight request for session creation."""
+    return {"message": "OK"}
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "justice-junction-auth"
+    }
