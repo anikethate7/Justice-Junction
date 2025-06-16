@@ -21,13 +21,20 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Configure CORS
+# Configure CORS - Fixed for your specific URLs
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # Alternative local port
+        "https://justice-junction-seven.vercel.app",  # Your Vercel URL
+        "https://justice-junction-seven.vercel.app/",  # With trailing slash
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Add monitoring and logging middleware if enabled
@@ -41,6 +48,24 @@ async def http_exception_handler(request, exc):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+# Handle CORS preflight requests
+@app.options("/{full_path:path}")
+async def options_handler(request: Request, full_path: str):
+    return JSONResponse(
+        content="OK",
+        headers={
+            "Access-Control-Allow-Origin": "https://justice-junction-seven.vercel.app",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
     )
 
 # Create uploads directory if it doesn't exist
@@ -63,7 +88,15 @@ if os.path.exists(REACT_DIR):
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "cors_origins": [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://justice-junction-seven.vercel.app"
+        ],
+        "api_url": "https://justice-junction.onrender.com"
+    }
 
 # Add metrics endpoint
 @app.get("/metrics")
@@ -90,7 +123,12 @@ async def serve_react_app(full_path: str):
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to JusticeJunction API"}
+    return {
+        "message": "Welcome to JusticeJunction API",
+        "frontend": "https://justice-junction-seven.vercel.app",
+        "api_docs": "https://justice-junction.onrender.com/docs",
+        "health": "https://justice-junction.onrender.com/health"
+    }
 
 if __name__ == "__main__":
     import uvicorn

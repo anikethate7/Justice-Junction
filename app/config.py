@@ -24,7 +24,12 @@ class Settings(BaseSettings):
     USE_MONGODB: bool = bool(os.getenv("USE_MONGODB", "False") == "True")
     
     # CORS settings
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "https://justice-junction-seven.vercel.app",
+    "https://justice-junction-seven.vercel.app/",
+    ]
     
     # File upload settings
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "uploads")
