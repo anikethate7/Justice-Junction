@@ -1,6 +1,6 @@
-# NyayGuru: AI-Powered Legal Assistant
+# Justice Junction: AI-Powered Legal Assistant
 
-NyayGuru (Justice Guru) is an AI-powered legal assistant application designed to provide legal information and assistance to users in India. The application features a chat interface where users can ask legal questions and receive informative responses with relevant citations and sources.
+Justice Junction is an AI-powered legal assistant application designed to provide legal information and assistance to users in India. The application features a chat interface where users can ask legal questions and receive informative responses with relevant citations and sources.
 
 ## Project Structure
 
